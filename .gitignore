@@ -1,0 +1,13 @@
+node_modules
+android/.gradle
+android/build
+android/app/build
+android/app/debug.keystore
+android/local.properties
+ios/build
+.env
+.env.*
+!.env.example
+coverage
+.trae/
+PROMPT_FRONTEND.md
