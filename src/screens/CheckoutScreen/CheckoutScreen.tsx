@@ -248,7 +248,26 @@ export function CheckoutScreen({ navigation }: Props) {
         return;
       }
 
-      showToast(error instanceof Error ? error.message : 'No fue posible procesar el pago.', 'error');
+      if (isInitiateTransactionFailure(error)) {
+        const code =
+          typeof error === 'object' && error && 'code' in error
+            ? String(error.code ?? '')
+            : '';
+
+        if (code === 'INSUFFICIENT_STOCK') {
+          setSummaryVisible(false);
+          showToast('No hay stock disponible.', 'error');
+          return;
+        }
+
+        showToast(error.message, 'error');
+        return;
+      }
+
+      showToast(
+        error instanceof Error ? error.message : 'No fue posible procesar el pago.',
+        'error',
+      );
     } finally {
       setIsSubmitting(false);
     }

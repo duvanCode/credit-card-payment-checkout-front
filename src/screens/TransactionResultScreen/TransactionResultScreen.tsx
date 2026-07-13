@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { Pressable, SafeAreaView, StyleSheet, Text, View } from 'react-native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { colors } from '../../constants/colors';
@@ -6,7 +6,10 @@ import { strings } from '../../constants/strings';
 import { useAppDispatch, useAppSelector } from '../../hooks/redux';
 import { RootStackParamList } from '../../navigation/types';
 import { clearCart } from '../../store/slices/cartSlice';
+import { fetchProducts } from '../../store/slices/productsSlice';
 import { clearTransaction } from '../../store/slices/transactionSlice';
+import { getTransaction } from '../../services/transactions.service';
+import { TransactionResponse, TransactionStatus } from '../../types/transaction.types';
 import { formatCurrency, formatTransactionDate } from '../../utils/formatters';
 import { moderateScale, scale, verticalScale } from '../../utils/responsive';
 
@@ -62,9 +65,20 @@ function getStatusLabel(status: string) {
 export function TransactionResultScreen({ navigation, route }: Props) {
   const dispatch = useAppDispatch();
   const transaction = useAppSelector(state => state.transaction.currentTransaction);
-  const status = route.params.status;
-  const isApproved = status === 'APPROVED';
-  const isPending = status === 'PENDING';
+  const [liveStatus, setLiveStatus] = useState<TransactionStatus>(route.params.status);
+  const [remoteTransaction, setRemoteTransaction] = useState<TransactionResponse | null>(
+    transaction ?? null,
+  );
+
+  const transactionDetails = remoteTransaction ?? transaction;
+  const displayTransactionId =
+    transactionDetails?.transactionId ?? route.params.transactionId ?? 'No disponible';
+
+  const transactionIdForPolling =
+    route.params.transactionId ?? transactionDetails?.transactionId ?? null;
+
+  const isApproved = liveStatus === 'APPROVED';
+  const isPending = liveStatus === 'PENDING';
 
   useEffect(() => {
     // #region debug-point E:result-screen-mounted
@@ -80,19 +94,73 @@ export function TransactionResultScreen({ navigation, route }: Props) {
     );
     // #endregion
 
-    if (isApproved) {
-      dispatch(clearCart());
+    setLiveStatus(route.params.status);
+  }, [route.params.status]);
+
+  useEffect(() => {
+    if (transaction) {
+      setRemoteTransaction(transaction);
     }
-  }, [dispatch, isApproved, route.params.status, route.params.transactionId, transaction?.transactionId]);
+  }, [transaction]);
+
+  useEffect(() => {
+    if (!isApproved) {
+      return;
+    }
+
+    dispatch(clearCart());
+    void dispatch(fetchProducts());
+  }, [dispatch, isApproved]);
+
+  useEffect(() => {
+    if (!isPending || !transactionIdForPolling) {
+      return;
+    }
+
+    let cancelled = false;
+
+    const poll = async () => {
+      try {
+        const nextTransaction = await getTransaction(transactionIdForPolling);
+
+        if (cancelled) {
+          return;
+        }
+
+        setRemoteTransaction(nextTransaction);
+
+        if (nextTransaction.status !== 'PENDING') {
+          setLiveStatus(nextTransaction.status);
+        }
+      } catch (_error) {
+      }
+    };
+
+    void poll();
+    const interval = setInterval(() => {
+      void poll();
+    }, 4000);
+
+    return () => {
+      cancelled = true;
+      clearInterval(interval);
+    };
+  }, [isPending, transactionIdForPolling]);
 
   const handleBackToStore = () => {
     dispatch(clearCart());
     dispatch(clearTransaction());
+    void dispatch(fetchProducts());
     navigation.popToTop();
   };
 
-  const displayTransactionId =
-    transaction?.transactionId ?? route.params.transactionId ?? 'No disponible';
+  const displayAmount = useMemo(() => {
+    if (!transactionDetails) {
+      return null;
+    }
+
+    return formatCurrency(transactionDetails.amount, transactionDetails.currency);
+  }, [transactionDetails]);
 
   return (
     <SafeAreaView style={styles.safeArea}>
@@ -128,28 +196,28 @@ export function TransactionResultScreen({ navigation, route }: Props) {
                 styles.value,
                 isApproved ? styles.successText : isPending ? styles.pendingText : styles.errorText,
               ]}>
-              {getStatusLabel(status)}
+              {getStatusLabel(liveStatus)}
             </Text>
           </View>
-          {transaction ? (
+          {transactionDetails ? (
             <>
               <View style={styles.row}>
                 <Text style={styles.label}>Producto</Text>
-                <Text style={styles.value}>{transaction.product.name}</Text>
+                <Text style={styles.value}>{transactionDetails.product.name}</Text>
               </View>
               <View style={styles.row}>
                 <Text style={styles.label}>Cantidad</Text>
-                <Text style={styles.value}>{transaction.product.quantity}</Text>
+                <Text style={styles.value}>{transactionDetails.product.quantity}</Text>
               </View>
               <View style={styles.row}>
                 <Text style={styles.label}>Monto</Text>
-                <Text style={styles.value}>
-                  {formatCurrency(transaction.amount, transaction.currency)}
-                </Text>
+                <Text style={styles.value}>{displayAmount}</Text>
               </View>
               <View style={styles.row}>
                 <Text style={styles.label}>Fecha</Text>
-                <Text style={styles.value}>{formatTransactionDate(transaction.createdAt)}</Text>
+                <Text style={styles.value}>
+                  {formatTransactionDate(transactionDetails.createdAt)}
+                </Text>
               </View>
             </>
           ) : null}
