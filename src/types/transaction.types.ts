@@ -5,14 +5,6 @@ export type TransactionStatus =
   | 'ERROR'
   | 'VOIDED';
 
-export interface CardData {
-  number: string;
-  holderName: string;
-  expiryMonth: string;
-  expiryYear: string;
-  cvc: string;
-}
-
 export interface CustomerData {
   email: string;
   fullName: string;
@@ -21,10 +13,14 @@ export interface CustomerData {
   legalIdType: string;
 }
 
-export interface PaymentPayload {
+export interface PaymentItem {
   productId: string;
   quantity: number;
-  cardData: CardData;
+}
+
+export interface PaymentPayload {
+  items: PaymentItem[];
+  cardToken: string;
   customerData: CustomerData;
   installments?: number;
 }
@@ -37,10 +33,12 @@ export interface TransactionProductSummary {
 
 export interface TransactionResponse {
   transactionId: string;
+  reference: string;
   gatewayTransactionId?: string | null;
   status: TransactionStatus;
   product: TransactionProductSummary;
   amount: number;
   currency: string;
+  itemsCount: number;
   createdAt: string;
 }

@@ -39,16 +39,16 @@ export function CardNumberInput({ value, error, onChangeText }: CardNumberInputP
 
 const styles = StyleSheet.create({
   wrapper: {
-    gap: verticalScale(6),
+    gap: verticalScale(4),
   },
   label: {
-    color: colors.text,
-    fontSize: moderateScale(13),
+    color: colors.textMuted,
+    fontSize: moderateScale(11),
     fontWeight: '700',
   },
   inputContainer: {
     alignItems: 'center',
-    backgroundColor: colors.surface,
+    backgroundColor: colors.surfaceLowest,
     borderColor: colors.border,
     borderRadius: scale(14),
     borderWidth: 1,
@@ -58,18 +58,18 @@ const styles = StyleSheet.create({
   input: {
     color: colors.text,
     flex: 1,
-    fontSize: moderateScale(15),
-    paddingVertical: verticalScale(13),
+    fontSize: moderateScale(14),
+    paddingVertical: verticalScale(8),
   },
   brand: {
-    backgroundColor: colors.primary,
+    backgroundColor: colors.accentSoft,
     borderRadius: scale(999),
-    paddingHorizontal: scale(10),
-    paddingVertical: verticalScale(6),
+    paddingHorizontal: scale(8),
+    paddingVertical: verticalScale(4),
   },
   brandText: {
-    color: colors.white,
-    fontSize: moderateScale(11),
+    color: colors.primary,
+    fontSize: moderateScale(10),
     fontWeight: '700',
   },
   inputError: {
@@ -77,6 +77,6 @@ const styles = StyleSheet.create({
   },
   error: {
     color: colors.danger,
-    fontSize: moderateScale(12),
+    fontSize: moderateScale(11),
   },
 });

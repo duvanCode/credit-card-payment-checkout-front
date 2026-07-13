@@ -7,6 +7,8 @@ interface ProductsState {
   selectedProduct: Product | null;
   loading: boolean;
   error: string | null;
+  searchQuery: string;
+  selectedCategory: string;
 }
 
 const initialState: ProductsState = {
@@ -14,6 +16,8 @@ const initialState: ProductsState = {
   selectedProduct: null,
   loading: false,
   error: null,
+  searchQuery: '',
+  selectedCategory: 'Todos',
 };
 
 export const fetchProducts = createAsyncThunk('products/fetchProducts', async () => {
@@ -36,6 +40,16 @@ const productsSlice = createSlice({
     },
     clearSelectedProduct(state) {
       state.selectedProduct = null;
+    },
+    setSearchQuery(state, action: PayloadAction<string>) {
+      state.searchQuery = action.payload;
+    },
+    setSelectedCategory(state, action: PayloadAction<string>) {
+      state.selectedCategory = action.payload;
+    },
+    resetFilters(state) {
+      state.searchQuery = '';
+      state.selectedCategory = 'Todos';
     },
   },
   extraReducers: builder => {
@@ -71,6 +85,12 @@ const productsSlice = createSlice({
   },
 });
 
-export const { selectProduct, clearSelectedProduct } = productsSlice.actions;
+export const {
+  selectProduct,
+  clearSelectedProduct,
+  setSearchQuery,
+  setSelectedCategory,
+  resetFilters,
+} = productsSlice.actions;
 
 export default productsSlice.reducer;

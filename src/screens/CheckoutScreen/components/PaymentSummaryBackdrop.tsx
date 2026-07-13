@@ -1,11 +1,13 @@
 import React from 'react';
-import { Modal, Pressable, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Modal, Pressable, StyleSheet, Text, View } from 'react-native';
 import { colors } from '../../../constants/colors';
 import { strings } from '../../../constants/strings';
 import { Product } from '../../../types/product.types';
 import { CardType } from '../../../utils/cardValidation';
 import { formatCurrency, maskCardNumber } from '../../../utils/formatters';
+import { calculateProductPricing } from '../../../utils/pricing';
 import { moderateScale, scale, verticalScale } from '../../../utils/responsive';
+import { AppIcon } from '../../../components/AppIcon/AppIcon';
 
 interface PaymentSummaryBackdropProps {
   visible: boolean;
@@ -15,7 +17,10 @@ interface PaymentSummaryBackdropProps {
   cardType: CardType;
   onBack: () => void;
   onConfirm: () => void;
+  loading?: boolean;
 }
+
+const SHEET_HEIGHT = '80%';
 
 export function PaymentSummaryBackdrop({
   visible,
@@ -25,44 +30,84 @@ export function PaymentSummaryBackdrop({
   cardType,
   onBack,
   onConfirm,
+  loading = false,
 }: PaymentSummaryBackdropProps) {
-  const total = product.price * quantity;
+  const pricing = calculateProductPricing(product.price, quantity);
 
   return (
     <Modal animationType="fade" transparent visible={visible}>
       <View style={styles.overlay}>
+        <Pressable disabled={loading} onPress={onBack} style={styles.backdropHitbox} />
         <View style={styles.card}>
-          <Text style={styles.title}>Resumen del pago</Text>
-          <View style={styles.summaryRow}>
-            <Text style={styles.label}>Producto</Text>
-            <Text style={styles.value}>{product.name}</Text>
+          <View style={styles.handle} />
+          <View style={styles.headerRow}>
+            <View>
+              <Text style={styles.title}>Resumen de pago</Text>
+              <Text style={styles.subtitle}>Revisa los datos antes de confirmar.</Text>
+            </View>
+            <Pressable disabled={loading} onPress={onBack} style={styles.closeButton}>
+              <AppIcon color={colors.textMuted} name="close" size={18} />
+            </Pressable>
           </View>
-          <View style={styles.summaryRow}>
-            <Text style={styles.label}>Cantidad</Text>
-            <Text style={styles.value}>{quantity}</Text>
+
+          <View style={styles.summaryCard}>
+            <View style={styles.summaryRow}>
+              <Text style={styles.label}>Subtotal</Text>
+              <Text style={styles.value}>{formatCurrency(pricing.subtotal, product.currency)}</Text>
+            </View>
+            <View style={styles.summaryRow}>
+              <Text style={styles.label}>IVA (19%)</Text>
+              <Text style={styles.value}>{formatCurrency(pricing.tax, product.currency)}</Text>
+            </View>
+            <View style={styles.summaryRow}>
+              <Text style={styles.label}>Envio</Text>
+              <Text style={[styles.value, styles.highlightValue]}>
+                {formatCurrency(pricing.shipping, product.currency)}
+              </Text>
+            </View>
+            <View style={styles.summaryRow}>
+              <Text style={styles.label}>Cantidad</Text>
+              <Text style={styles.value}>{quantity}</Text>
+            </View>
+            <View style={styles.divider} />
+            <View style={styles.summaryRow}>
+              <Text style={styles.totalLabel}>Total</Text>
+              <Text style={styles.totalValue}>{formatCurrency(pricing.total, product.currency)}</Text>
+            </View>
           </View>
-          <View style={styles.summaryRow}>
-            <Text style={styles.label}>Subtotal</Text>
-            <Text style={styles.value}>{formatCurrency(total, product.currency)}</Text>
+
+          <Text style={styles.sectionLabel}>Metodo de pago</Text>
+          <View style={styles.paymentMethodCard}>
+            <View style={styles.paymentBrand}>
+              <Text style={styles.paymentBrandText}>
+                {cardType === 'MASTERCARD' ? 'MC' : 'VISA'}
+              </Text>
+            </View>
+            <View style={styles.paymentMethodContent}>
+              <Text style={styles.paymentMethodTitle}>{maskCardNumber(cardNumber)}</Text>
+              <Text style={styles.paymentMethodSubtitle}>{product.name}</Text>
+            </View>
           </View>
-          <View style={styles.summaryRow}>
-            <Text style={styles.label}>Tarjeta</Text>
-            <Text style={styles.value}>
-              {cardType === 'UNKNOWN' ? 'Tarjeta' : cardType} {maskCardNumber(cardNumber)}
-            </Text>
-          </View>
-          <View style={[styles.summaryRow, styles.totalRow]}>
-            <Text style={styles.totalLabel}>Total</Text>
-            <Text style={styles.totalValue}>{formatCurrency(total, product.currency)}</Text>
-          </View>
+
           <View style={styles.actions}>
-            <Pressable onPress={onBack} style={[styles.button, styles.secondaryButton]}>
+            <Pressable disabled={loading} onPress={onBack} style={[styles.button, styles.secondaryButton, loading ? styles.buttonDisabled : undefined]}>
               <Text style={[styles.buttonText, styles.secondaryText]}>Volver</Text>
             </Pressable>
-            <Pressable onPress={onConfirm} style={styles.button}>
-              <Text style={styles.buttonText}>{strings.confirmPayment}</Text>
+            <Pressable disabled={loading} onPress={onConfirm} style={[styles.button, loading ? styles.buttonDisabled : undefined]}>
+              {loading ? (
+                <ActivityIndicator color={colors.white} />
+              ) : (
+                <Text style={styles.buttonText}>{strings.confirmPayment}</Text>
+              )}
             </Pressable>
           </View>
+
+          {loading ? (
+            <View style={styles.loadingHint}>
+              <AppIcon color={colors.textMuted} name="lock" size={13} />
+              <Text style={styles.loadingHintText}>Procesando pago de forma segura...</Text>
+            </View>
+          ) : null}
         </View>
       </View>
     </Modal>
@@ -71,23 +116,63 @@ export function PaymentSummaryBackdrop({
 
 const styles = StyleSheet.create({
   overlay: {
-    alignItems: 'center',
     backgroundColor: colors.overlay,
     flex: 1,
-    justifyContent: 'center',
-    padding: scale(20),
+    justifyContent: 'flex-end',
+  },
+  backdropHitbox: {
+    flex: 1,
   },
   card: {
-    backgroundColor: colors.surface,
-    borderRadius: scale(24),
-    padding: scale(20),
+    backgroundColor: colors.surfaceLowest,
+    borderTopLeftRadius: scale(28),
+    borderTopRightRadius: scale(28),
+    display: 'flex',
+    height: SHEET_HEIGHT,
+    paddingHorizontal: scale(20),
+    paddingTop: verticalScale(10),
+    paddingBottom: verticalScale(24),
     width: '100%',
+  },
+  headerRow: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+  },
+  handle: {
+    alignSelf: 'center',
+    backgroundColor: colors.border,
+    borderRadius: scale(999),
+    height: verticalScale(4),
+    marginBottom: verticalScale(16),
+    width: scale(34),
   },
   title: {
     color: colors.text,
-    fontSize: moderateScale(22),
+    fontSize: moderateScale(24),
     fontWeight: '800',
+  },
+  subtitle: {
+    color: colors.textMuted,
+    fontSize: moderateScale(13),
     marginBottom: verticalScale(18),
+    marginTop: verticalScale(4),
+  },
+  closeButton: {
+    alignItems: 'center',
+    backgroundColor: colors.surfaceContainerLow,
+    borderRadius: scale(999),
+    height: scale(40),
+    justifyContent: 'center',
+    width: scale(40),
+  },
+  summaryCard: {
+    backgroundColor: colors.surfaceContainerLow,
+    borderColor: colors.border,
+    borderRadius: scale(18),
+    borderWidth: 1,
+    marginBottom: verticalScale(18),
+    padding: scale(16),
   },
   summaryRow: {
     flexDirection: 'row',
@@ -106,11 +191,16 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     textAlign: 'right',
   },
+  highlightValue: {
+    color: colors.primary,
+  },
+  divider: {
+    backgroundColor: colors.border,
+    height: 1,
+    marginVertical: verticalScale(4),
+  },
   totalRow: {
-    borderTopColor: colors.border,
-    borderTopWidth: 1,
-    marginTop: verticalScale(6),
-    paddingTop: verticalScale(16),
+    marginBottom: 0,
   },
   totalLabel: {
     color: colors.text,
@@ -122,20 +212,68 @@ const styles = StyleSheet.create({
     fontSize: moderateScale(18),
     fontWeight: '900',
   },
+  sectionLabel: {
+    color: colors.borderStrong,
+    fontSize: moderateScale(11),
+    fontWeight: '700',
+    letterSpacing: scale(0.8),
+    marginBottom: verticalScale(10),
+    textTransform: 'uppercase',
+  },
+  paymentMethodCard: {
+    alignItems: 'center',
+    backgroundColor: colors.surfaceContainerLow,
+    borderColor: colors.border,
+    borderRadius: scale(18),
+    borderWidth: 1,
+    flexDirection: 'row',
+    marginBottom: verticalScale(18),
+    padding: scale(14),
+  },
+  paymentBrand: {
+    alignItems: 'center',
+    backgroundColor: colors.surfaceLowest,
+    borderRadius: scale(12),
+    height: verticalScale(34),
+    justifyContent: 'center',
+    marginRight: scale(12),
+    width: scale(52),
+  },
+  paymentBrandText: {
+    color: colors.primary,
+    fontSize: moderateScale(14),
+    fontWeight: '900',
+  },
+  paymentMethodContent: {
+    flex: 1,
+  },
+  paymentMethodTitle: {
+    color: colors.text,
+    fontSize: moderateScale(15),
+    fontWeight: '700',
+  },
+  paymentMethodSubtitle: {
+    color: colors.textMuted,
+    fontSize: moderateScale(12),
+    marginTop: verticalScale(4),
+  },
   actions: {
     flexDirection: 'row',
     gap: scale(12),
-    marginTop: verticalScale(18),
+    marginTop: 'auto',
   },
   button: {
     alignItems: 'center',
     backgroundColor: colors.primary,
-    borderRadius: scale(14),
+    borderRadius: scale(16),
     flex: 1,
     paddingVertical: verticalScale(14),
   },
+  buttonDisabled: {
+    opacity: 0.7,
+  },
   secondaryButton: {
-    backgroundColor: colors.surface,
+    backgroundColor: colors.surfaceContainerLow,
     borderColor: colors.border,
     borderWidth: 1,
   },
@@ -146,5 +284,16 @@ const styles = StyleSheet.create({
   },
   secondaryText: {
     color: colors.text,
+  },
+  loadingHint: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    justifyContent: 'center',
+    marginTop: verticalScale(14),
+  },
+  loadingHintText: {
+    color: colors.textMuted,
+    fontSize: moderateScale(11),
+    marginLeft: scale(6),
   },
 });

@@ -3,6 +3,7 @@ import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
 import { colors } from '../../../constants/colors';
 import { Product } from '../../../types/product.types';
 import { formatCurrency } from '../../../utils/formatters';
+import { calculateProductPricing } from '../../../utils/pricing';
 import { moderateScale, scale, verticalScale } from '../../../utils/responsive';
 
 interface ProductCardProps {
@@ -12,26 +13,25 @@ interface ProductCardProps {
 
 export function ProductCard({ product, onPress }: ProductCardProps) {
   const lowStock = product.stock < 5;
+  const stockLabel = lowStock ? `${product.stock} restantes` : 'Disponible';
+  const pricing = calculateProductPricing(product.price, 1);
 
   return (
     <Pressable onPress={() => onPress(product)} style={styles.card}>
-      <Image resizeMode="cover" source={{ uri: product.imageUrl }} style={styles.image} />
-      <View style={styles.body}>
-        <View style={styles.row}>
-          <Text numberOfLines={1} style={styles.category}>
-            {product.category}
-          </Text>
-          {lowStock ? (
-            <View style={styles.lowStockBadge}>
-              <Text style={styles.lowStockText}>Pocas unidades</Text>
-            </View>
-          ) : null}
+      <View style={styles.imageWrapper}>
+        <Image resizeMode="cover" source={{ uri: product.imageUrl }} style={styles.image} />
+        <View style={[styles.stockBadge, lowStock ? styles.stockBadgeAlert : styles.stockBadgeNeutral]}>
+          <Text style={styles.stockBadgeText}>{stockLabel}</Text>
         </View>
+      </View>
+      <View style={styles.body}>
+        <Text numberOfLines={1} style={styles.category}>
+          {product.category}
+        </Text>
         <Text numberOfLines={2} style={styles.name}>
           {product.name}
         </Text>
-        <Text style={styles.price}>{formatCurrency(product.price, product.currency)}</Text>
-        <Text style={styles.stock}>Stock disponible: {product.stock}</Text>
+        <Text style={styles.price}>{formatCurrency(pricing.total, product.currency)}</Text>
       </View>
     </Pressable>
   );
@@ -39,62 +39,65 @@ export function ProductCard({ product, onPress }: ProductCardProps) {
 
 const styles = StyleSheet.create({
   card: {
-    backgroundColor: colors.surface,
+    backgroundColor: colors.surfaceLowest,
     borderColor: colors.border,
     borderRadius: scale(18),
     borderWidth: 1,
     marginBottom: verticalScale(16),
     overflow: 'hidden',
+    shadowColor: colors.black,
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.06,
+    shadowRadius: 12,
     width: '48%',
+  },
+  imageWrapper: {
+    position: 'relative',
   },
   image: {
     aspectRatio: 1,
-    backgroundColor: colors.surfaceMuted,
+    backgroundColor: colors.surfaceContainer,
     width: '100%',
+  },
+  stockBadge: {
+    borderRadius: scale(999),
+    paddingHorizontal: scale(8),
+    paddingVertical: verticalScale(4),
+    position: 'absolute',
+    right: scale(10),
+    top: verticalScale(10),
+  },
+  stockBadgeAlert: {
+    backgroundColor: colors.primary,
+  },
+  stockBadgeNeutral: {
+    backgroundColor: colors.primarySoft,
+  },
+  stockBadgeText: {
+    color: colors.white,
+    fontSize: moderateScale(10),
+    fontWeight: '700',
   },
   body: {
     gap: verticalScale(6),
     padding: scale(12),
   },
-  row: {
-    alignItems: 'center',
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-  },
   category: {
-    backgroundColor: colors.accentSoft,
-    borderRadius: scale(999),
-    color: colors.accent,
-    fontSize: moderateScale(11),
-    fontWeight: '700',
-    overflow: 'hidden',
-    paddingHorizontal: scale(8),
-    paddingVertical: verticalScale(4),
-  },
-  lowStockBadge: {
-    backgroundColor: colors.warning,
-    borderRadius: scale(999),
-    paddingHorizontal: scale(6),
-    paddingVertical: verticalScale(3),
-  },
-  lowStockText: {
-    color: colors.white,
+    color: colors.textMuted,
     fontSize: moderateScale(10),
     fontWeight: '700',
+    letterSpacing: scale(0.7),
+    textTransform: 'uppercase',
   },
   name: {
     color: colors.text,
-    fontSize: moderateScale(15),
+    fontSize: moderateScale(16),
     fontWeight: '700',
     minHeight: verticalScale(40),
   },
   price: {
     color: colors.primary,
-    fontSize: moderateScale(16),
+    fontSize: moderateScale(17),
     fontWeight: '800',
-  },
-  stock: {
-    color: colors.textMuted,
-    fontSize: moderateScale(12),
   },
 });

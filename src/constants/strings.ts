@@ -1,5 +1,5 @@
 export const strings = {
-  appName: 'Checkout Mobile',
+  appName: 'Pago movil',
   paymentProcessing: 'Procesando pago...',
   retry: 'Reintentar',
   continue: 'Continuar',
