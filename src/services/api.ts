@@ -1,10 +1,7 @@
 import { BACKEND_API_URL } from '@env';
-import { Platform } from 'react-native';
 import axios from 'axios';
 
-const baseURL =
-  BACKEND_API_URL ??
-  (Platform.OS === 'android' ? 'http://localhost:3000' : 'http://localhost:3000');
+const baseURL = BACKEND_API_URL.trim();
 
 export const api = axios.create({
   baseURL,
@@ -19,6 +16,10 @@ api.interceptors.response.use(
       error.response?.data?.message ??
       'No fue posible conectar con el servidor.';
 
-    return Promise.reject(new Error(message));
+    if (error && typeof error === 'object') {
+      error.message = message;
+    }
+
+    return Promise.reject(error);
   },
 );

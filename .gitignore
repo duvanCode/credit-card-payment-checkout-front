@@ -11,3 +11,8 @@ ios/build
 coverage
 .trae/
 PROMPT_FRONTEND.md
+.dbg/
+debug-rejected-payment-screen.md
+rejected_flow.png
+window_dump.xml
+base_fornt.html
