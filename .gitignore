@@ -9,6 +9,7 @@ ios/build
 .env.*
 !.env.example
 coverage
+.jest-cache
 .trae/
 PROMPT_FRONTEND.md
 .dbg/
